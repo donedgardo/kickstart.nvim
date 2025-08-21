@@ -572,6 +572,26 @@ require('lazy').setup({
           --  the definition of its *type*, not where it was *defined*.
           map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
+          -- This I have just added for cmake and cargo building and running
+          -- Build keymaps
+          vim.keymap.set('n', '<leader>bb', ':!make<CR>', { desc = '[B]uild with make' })
+          vim.keymap.set('n', '<leader>bc', ':!cmake --build build<CR>', { desc = '[B]uild with cmake' })
+          vim.keymap.set('n', '<leader>bt', ':!make test<CR>', { desc = '[B]uild and test' })
+          vim.keymap.set('n', '<leader>br', ':!make run<CR>', { desc = '[B]uild and run' })
+
+          -- For Rust (cargo)
+          vim.keymap.set('n', '<leader>cb', ':!cargo build<CR>', { desc = '[C]argo build' })
+          vim.keymap.set('n', '<leader>ct', ':!cargo test<CR>', { desc = '[C]argo test' })
+          vim.keymap.set('n', '<leader>cr', ':!cargo run<CR>', { desc = '[C]argo run' })
+
+          -- Terminal Access
+          -- Terminal settings
+          vim.keymap.set('n', '<leader>tt', ':terminal<CR>', { desc = '[T]erminal' })
+          vim.keymap.set('t', '<Esc>', '<C-\\><C-n>', { desc = 'Exit terminal mode' })
+
+          -- Quick build in terminal
+          vim.keymap.set('n', '<leader>tm', ':terminal make<CR>', { desc = '[T]erminal make' })
+
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
           ---@param client vim.lsp.Client
           ---@param method vim.lsp.protocol.Method
@@ -734,6 +754,14 @@ require('lazy').setup({
         },
       }
     end,
+  },
+  {
+    'Civitasv/cmake-tools.nvim',
+    dependencies = { 'nvim-lua/plenary.nvim' },
+    opts = {
+      cmake_command = 'cmake',
+      cmake_build_directory = 'build',
+    },
   },
 
   { -- Autoformat
