@@ -623,6 +623,91 @@ require('lazy').setup({
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
           end
+
+          -- Only apply these keybinds for clangd
+          if client and client.name == 'clangd' then
+            local function debug_code_actions()
+              vim.lsp.buf.code_action {
+                context = {
+                  only = {}, -- Get all available actions
+                  diagnostics = vim.lsp.diagnostic.get_line_diagnostics(),
+                },
+                apply = false,
+              }
+            end
+            -- Extract method refactoring (improved)
+            vim.keymap.set('v', '<leader>rem', function()
+              -- Get visual selection range
+              local start_pos = vim.fn.getpos "'<"
+              local end_pos = vim.fn.getpos "'>"
+
+              print 'Requesting extract actions for selection...'
+              vim.lsp.buf.code_action {
+                context = {
+                  only = { 'refactor.extract.function', 'refactor.extract' },
+                  diagnostics = {},
+                },
+                range = {
+                  start = { start_pos[2] - 1, start_pos[3] - 1 },
+                  ['end'] = { end_pos[2] - 1, end_pos[3] },
+                },
+              }
+            end, { buffer = event.buf, desc = '[R]efactor [E]xtract [M]ethod' })
+
+            -- Extract variable refactoring (improved)
+            vim.keymap.set('v', '<leader>rev', function()
+              local start_pos = vim.fn.getpos "'<"
+              local end_pos = vim.fn.getpos "'>"
+
+              print 'Requesting extract variable actions...'
+              vim.lsp.buf.code_action {
+                context = {
+                  only = { 'refactor.extract.variable', 'refactor.extract' },
+                  diagnostics = {},
+                },
+                range = {
+                  start = { start_pos[2] - 1, start_pos[3] - 1 },
+                  ['end'] = { end_pos[2] - 1, end_pos[3] },
+                },
+              }
+            end, { buffer = event.buf, desc = '[R]efactor [E]xtract [V]ariable' })
+
+            -- General refactoring menu (improved)
+            vim.keymap.set({ 'n', 'v' }, '<leader>cr', function()
+              print 'Requesting all refactor actions...'
+              vim.lsp.buf.code_action {
+                context = {
+                  only = { 'refactor' },
+                  diagnostics = {},
+                },
+              }
+            end, { buffer = event.buf, desc = '[C]ode [R]efactor' })
+
+            -- Debug keybind to see all available actions
+            vim.keymap.set({ 'n', 'v' }, '<leader>cda', debug_code_actions, { buffer = event.buf, desc = '[C]ode [D]ebug [A]ctions' })
+
+            -- Alternative: Try with different action kinds
+            vim.keymap.set('v', '<leader>reff', function()
+              vim.lsp.buf.code_action {
+                filter = function(action)
+                  return action.kind
+                    and (
+                      action.kind:match 'refactor%.extract'
+                      or action.kind:match 'refactor%.inline'
+                      or action.kind:match 'refactor%.move'
+                      or action.kind:match 'refactor%.rewrite'
+                    )
+                end,
+              }
+            end, { buffer = event.buf, desc = '[R]efactor [F]iltered actions' })
+          end
+          if pcall(require, 'which-key') then
+            require('which-key').add {
+              { '<leader>c', group = '[C]ode' },
+              { '<leader>r', group = '[R]efactor' },
+              { '<leader>re', group = '[R]efactor [E]xtract' },
+            }
+          end
         end,
       })
 
@@ -671,7 +756,28 @@ require('lazy').setup({
       --  - settings (table): Override the default settings passed when initializing the server.
       --        For example, to see the options for `lua_ls`, you could go to: https://luals.github.io/wiki/settings/
       local servers = {
-        clangd = {},
+        clangd = {
+          cmd = {
+            'clangd',
+            '--background-index',
+            '--clang-tidy',
+            '--header-insertion=iwyu',
+            '--completion-style=detailed',
+            '--function-arg-placeholders',
+            '--fallback-style=llvm',
+            '--enable-config',
+            '--offset-encoding=utf-16',
+            '--all-scopes-completion',
+            '--cross-file-rename',
+            '--log=verbose', -- Add this for debugging
+          },
+          init_options = {
+            usePlaceholders = true,
+            completeUnimported = true,
+            clangdFileStatus = true,
+          },
+          filetypes = { 'c', 'cpp', 'objc', 'objcpp', 'cuda', 'proto' },
+        },
         -- gopls = {},
         -- pyright = {},
         rust_analyzer = {},
